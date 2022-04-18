@@ -25,11 +25,11 @@
         </div>
     </body>
     <script>
-        function mapField(key) {
-            return mapper => objArray => objArray.map(obj => mapper(obj[key]));
+        function flatMapField(key, mapper) {
+            return objArray => objArray.flatMap(obj => mapper(obj[key]));
         }
-        function mapEach() {
-            return mapper => objArray => objArray.map(mapper);
+        function mapEach(mapper) {
+            return objArray => objArray.map(mapper);
         }
 
         function buildEchartOption(title, dataSet, unit) {
@@ -64,19 +64,19 @@
             };
 
             formatters[SUPPORTED_UNITS.percent_0_to_1] = (value) => {
-                return `${ (parseFloat(value) * 100).toFixed(2)}%`;
+                return `${ (parseFloat(value) * 100).toFixed(2)}\%`;
             }
 
             formatters[SUPPORTED_UNITS.percent_0_to_100] = (value) => {
-                return `${ (parseFloat(value)).toFixed(2)}%`;
+                return `${ (parseFloat(value)).toFixed(2)}\%`;
             }
 
             formatters[SUPPORTED_UNITS.s] = (value) => {
-                return `${value}s`;
+                return `${value} s`;
             }
 
             formatters[SUPPORTED_UNITS.ms] = (value) => {
-                return `${value}ms`;
+                return `${value} ms`;
             }
 
             const option = {
@@ -182,22 +182,9 @@
 
         let pages = {{ pagesJson }};
 
-        // [page] -> [[[charts]]]
-        // = mapField("sections")(mapField("graphs")(mapEach(createGraph)));
-
-        window.charts = [];
-        for (let p in pages) {
-            let page = pages[p];
-            for (let s in page.sections) {
-                let section = page.sections[s];
-                for (let g in section.graphs) {
-                    let graph = section.graphs[g];
-                    window
-                        .charts
-                        .push(createGraph(graph));
-                }
-            }
-        }
+        // [page] -> [charts]
+        let pagesToCharts = flatMapField("sections", flatMapField("graphs", mapEach(createGraph)));
+        window.charts = pagesToCharts(pages);
     </script>
 
 </html>
