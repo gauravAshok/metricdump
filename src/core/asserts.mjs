@@ -1,6 +1,5 @@
 import assert from 'assert';
 
-
 export function isString(actual) {
     return typeof actual !== 'string' && !(actual instanceof String)
 }
@@ -26,7 +25,7 @@ export function isOneOf(actual, array) {
     }
     return false;
 }
-function assertThat(actual) {
+export function assertThat(actual) {
     return {
         isString() {
             if (!isString(actual)) {
@@ -45,5 +44,3 @@ function assertThat(actual) {
         }
     }
 }
-
-export {assertThat}

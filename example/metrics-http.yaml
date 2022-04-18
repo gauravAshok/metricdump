@@ -1,5 +1,0 @@
-- query: sum(rate(caddy_http_requests_total[10m])) by (handler)
-  title: Caddy HTTP Requests
-- query: sum(rate(prometheus_notifications_latency_seconds_sum[5m])) by (instance)/sum(rate(prometheus_notifications_latency_seconds_count[5m])) by (instance)
-  title: Prometheus Notification Latency
-  unit: second

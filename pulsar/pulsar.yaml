@@ -1,0 +1,41 @@
+- name: JMV Metrics
+  sections:
+    - name: bookies
+      graphs:
+        - name: cpu usage
+          query: irate(process_cpu_seconds_total{job="bookie"}[30s]) * 100
+          unit: percent_0_to_100
+        - name: heap usage
+          query: jvm_memory_bytes_used{job="bookie",area="heap"}
+          unit: bytes
+        - name: direct memory usage
+          query: jvm_memory_direct_bytes_used{job="bookie"}
+          unit: bytes
+        - name: GC
+          query: sum(increase(jvm_gc_collection_seconds_sum{job="bookie"}[30s])) by (kubernetes_pod_name)
+          unit: ms
+    - name: brokers
+      graphs:
+        - name: cpu usage
+          query: irate(process_cpu_seconds_total{job="broker"}[30s]) * 100
+          unit: percent_0_to_100
+        - name: heap usage
+          query: jvm_memory_bytes_used{job="broker",area="heap"}
+          unit: bytes
+        - name: direct memory usage
+          query: jvm_memory_direct_bytes_used{job="broker"}
+          unit: bytes
+        - name: GC
+          query: sum(increase(jvm_gc_collection_seconds_sum{job="broker"}[30s])) by (kubernetes_pod_name)
+          unit: ms
+    - name: zookeepers
+      graphs:
+        - name: cpu usage
+          query: irate(process_cpu_seconds_total{job="zookeeper"}[30s]) * 100
+          unit: percent_0_to_100
+        - name: heap usage
+          query: jvm_memory_bytes_used{job="zookeeper",area="heap"}
+          unit: bytes
+        - name: GC
+          query: sum(increase(jvm_gc_collection_seconds_sum{job="zookeeper"}[30s])) by (kubernetes_pod_name)
+          unit: ms

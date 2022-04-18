@@ -5,17 +5,17 @@ import assert from "assert";
 const log = debug('http');
 
 const DEFAULT_OPTIONS = {
-    step: 14
+    step: 60
 }
 
 function getName(result) {
     const labels = []
-    for(let key in result.metric) {
-        if (result.metric.hasOwnProperty(key)) {
-            labels.push(`${key}=${result.metric[key]}`)
-        }
+    if ('kubernetes_pod_name' in result.metric) {
+        return result.metric['kubernetes_pod_name'];
     }
-    return labels.join(" ")
+    else {
+        throw `metric does not have recognized names : ${JSON.stringify(result)}`
+    }
 }
 
 class Prometheus {
@@ -24,7 +24,7 @@ class Prometheus {
         this.url = url;
     }
 
-    async queryRange (promQL, startInSeconds, endInSeconds, _options) {
+    async queryRange(promQL, startInSeconds, endInSeconds, _options) {
 
         const options = Object.assign({}, DEFAULT_OPTIONS, _options)
 
@@ -37,7 +37,7 @@ class Prometheus {
         const resp = await fetch(url.href)
         const json = await resp.json();
 
-        if(!resp.ok) {
+        if (!resp.ok) {
             assert.fail(`Unable to query from Prometheus: ${JSON.stringify(json, null, 4)}`)
         }
 
@@ -55,7 +55,7 @@ class Prometheus {
         });
     }
 
-    async queryRangeSince (promQL, durationInSeconds, options) {
+    async queryRangeSince(promQL, durationInSeconds, options) {
         const endInSeconds = Date.now() / 1000;
         const startInSeconds = endInSeconds - durationInSeconds;
         return await this.queryRange(promQL, startInSeconds, endInSeconds, options);

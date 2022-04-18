@@ -1,6 +1,6 @@
 const title = {
     "zh-CN": "Prometheus 查看器",
-        "en-US": "Prometheus Dashboard"
+    "en-US": "Prometheus Dashboard"
 }
 
 export {

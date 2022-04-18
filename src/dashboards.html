@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.3.2/dist/echarts.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/luxon@2.3.2/build/global/luxon.min.js"></script>
+    </head>
+
+    <body>
+        <div id="root">
+            {% for page in pages %}
+                <h1>{{ page.name }}</h1>
+                {% for section in page.sections %}
+                    <h2>{{ section.name }}</h2>
+                    <table>
+                        {% for graph in section.graphs %}
+                            <td>
+                                <div id="graph-{{ graph.id }}" style="width:480px;height:360px"></div>
+                            </td>
+                        {% endfor %}
+                    </table>
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </body>
+    <script>
+        function mapField(key) {
+            return mapper => objArray => objArray.map(obj => mapper(obj[key]));
+        }
+        function mapEach() {
+            return mapper => objArray => objArray.map(mapper);
+        }
+
+        function buildEchartOption(title, dataSet, unit) {
+            const SUPPORTED_UNITS = {
+                percent_0_to_1: 'Percent (0.0-1.0)',
+                percent_0_to_100: 'Percent (0.0-100.0)',
+                s: 's',
+                ms: "ms",
+                bytes: 'bytes'
+            };
+
+            const formatters = {};
+            formatters[SUPPORTED_UNITS.bytes] = (value) => {
+                const b = 1;
+                const kb = 1000 * b;
+                const mb = 1000 * kb;
+                const gb = 1000 * mb;
+                const tb = 1000 * gb;
+                if (value > tb) {
+                    return `${ (value / tb).toFixed(2)} TB`;
+                }
+                if (value > gb) {
+                    return `${ (value / gb).toFixed(2)} GB`;
+                }
+                if (value > mb) {
+                    return `${ (value / mb).toFixed(2)} MB`;
+                }
+                if (value > kb) {
+                    return `${ (value / kb).toFixed(2)} KB`;
+                }
+                return `${ (value / kb).toFixed(2)} B`;
+            };
+
+            formatters[SUPPORTED_UNITS.percent_0_to_1] = (value) => {
+                return `${ (parseFloat(value) * 100).toFixed(2)}%`;
+            }
+
+            formatters[SUPPORTED_UNITS.percent_0_to_100] = (value) => {
+                return `${ (parseFloat(value)).toFixed(2)}%`;
+            }
+
+            formatters[SUPPORTED_UNITS.s] = (value) => {
+                return `${value}s`;
+            }
+
+            formatters[SUPPORTED_UNITS.ms] = (value) => {
+                return `${value}ms`;
+            }
+
+            const option = {
+                tooltip: {
+                    trigger: 'axis',
+                    position: function (pt) {
+                        return [pt[0], '10%'];
+                    }
+                },
+                title: {
+                    left: 'center',
+                    text: title,
+                    textStyle: {
+                        fontSize: 24,
+                        fontWeight: 'bold'
+                    }
+                },
+                backgroundColor: "#FFF",
+                animation: false,
+                legend: {
+                    left: 'left',
+                    show: false,
+                    top: 'bottom',
+                    orient: 'horizontal',
+                    icon: 'circle',
+                    data: dataSet.length > 20
+                        ? null
+                        : dataSet.map(d => d.name),
+                    animation: false,
+                    type: 'scroll'
+                },
+                grid: {
+                    left: '3%',
+                    right: '15%',
+                    bottom: '3%',
+                    containLabel: true,
+                    show: false,
+                    backgroundColor: '#fff'
+                },
+                toolbox: {
+                    show: true,
+                    feature: {
+                        saveAsImage: {}
+                    }
+                },
+                xAxis: {
+                    type: 'time',
+                    boundaryGap: false,
+                    splitNumber: 3,
+                    axisLabel: {
+                        formatter: function (value, index) {
+                            return luxon.DateTime
+                                .fromMillis(value)
+                                .toFormat('yyyy-MM-dd\nhh:mm:ss')
+                        }
+                    }
+                },
+                yAxis: {
+                    type: 'value',
+                    boundaryGap: [
+                        0, '20%'
+                    ],
+                    axisLabel: {
+                        formatter: function (value, index) {
+                            const formatter = !!formatters[unit]
+                                ? formatters[unit]
+                                : (v) => v;
+                            return formatter(value);
+                        }
+                    }
+                },
+                series: dataSet.map(data => {
+                    return {
+                        name: data.name,
+                        type: 'line',
+                        smooth: false,
+                        symbol: 'none',
+                        xAxis: {
+                            type: 'time',
+                            boundaryGap: false
+                        },
+                        yAxis: {
+                            type: 'value',
+                            boundaryGap: [0, '100%']
+                        },
+                        data: data.values
+                    };
+                })
+            };
+            return option;
+        }
+
+        // graph -> chart
+        function createGraph(graph) {
+            const echartOption = buildEchartOption(graph.name, graph.dataset, graph.unit);
+            let elem = document.getElementById(`graph-${graph.id}`);
+            let chart = window
+                .echarts
+                .init(elem, null, {renderer: "canvas"});
+            chart.setOption(echartOption);
+            return chart;
+        }
+
+        let pages = {{ pagesJson }};
+
+        // [page] -> [[[charts]]]
+        // = mapField("sections")(mapField("graphs")(mapEach(createGraph)));
+
+        window.charts = [];
+        for (let p in pages) {
+            let page = pages[p];
+            for (let s in page.sections) {
+                let section = page.sections[s];
+                for (let g in section.graphs) {
+                    let graph = section.graphs[g];
+                    window
+                        .charts
+                        .push(createGraph(graph));
+                }
+            }
+        }
+    </script>
+
+</html>
