@@ -38,7 +38,8 @@
                 percent_0_to_100: 'Percent (0.0-100.0)',
                 s: 's',
                 ms: "ms",
-                bytes: 'bytes'
+                bytes: 'bytes',
+                short: 'short'
             };
 
             const formatters = {};
@@ -182,7 +183,7 @@
 
         let pages = {{ pagesJson }};
 
-        // [page] -> [charts]
+        // [page] -> [chart]
         let pagesToCharts = flatMapField("sections", flatMapField("graphs", mapEach(createGraph)));
         window.charts = pagesToCharts(pages);
     </script>

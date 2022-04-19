@@ -39,3 +39,151 @@
         - name: GC
           query: sum(increase(jvm_gc_collection_seconds_sum{job="zookeeper"}[30s])) by (kubernetes_pod_name)
           unit: ms
+- name: Broker Metrics
+  sections:
+    - name: Publish Throughput
+      graphs:
+        - name: Publish Rate (msg/s)
+          query: sum(pulsar_rate_in{job="broker"}) by (kubernetes_pod_name)
+        - name: Publish Throughput (MB/s)
+          query: sum(pulsar_throughput_in{job="broker"}) by (kubernetes_pod_name)
+          unit: bytes
+    - name: Dispatch Throughput
+      graphs:
+        - name: Dispatch Rate (msg/s)
+          query: sum(pulsar_rate_out{job="broker"}) by (kubernetes_pod_name)
+        - name: Dispatch Throughput (MB/s)
+          query: sum(pulsar_throughput_out{job="broker"}) by (kubernetes_pod_name)
+          unit: bytes
+    - name: Storage Latency
+      graphs:
+        - name: Storage Write Latency
+          stacked: true
+          unit: ms
+          queries:
+            - name: 0 - 0.5 ms
+              query: sum(pulsar_storage_write_latency_le_0_5{job="broker"}) / 60.0
+            - name: 0.5 - 1 ms
+              query: sum(pulsar_storage_write_latency_le_1{job="broker"}) / 60.0
+            - name: 1 - 5 ms
+              query: sum(pulsar_storage_write_latency_le_5{job="broker"}) / 60.0
+            - name: 5 - 10 ms
+              query: sum(pulsar_storage_write_latency_le_10{job="broker"}) / 60.0
+            - name: 10 - 20 ms
+              query: sum(pulsar_storage_write_latency_le_20{job="broker"}) / 60.0
+            - name: 20 - 50 ms
+              query: sum(pulsar_storage_write_latency_le_50{job="broker"}) / 60.0
+            - name: 50 - 100 ms
+              query: sum(pulsar_storage_write_latency_le_100{job="broker"}) / 60.0
+            - name: 100 - 200 ms
+              query: sum(pulsar_storage_write_latency_le_200{job="broker"}) / 60.0
+            - name: 200 ms - 1 s
+              query: sum(pulsar_storage_write_latency_le_1000{job="broker"}) / 60.0
+            - name: \> 1 s
+              query: sum(pulsar_storage_write_latency_overflow{job="broker"}) / 60.0
+    - name: Publish Latencies
+      graphs:
+        - name: 50 pct
+          query: sum(pulsar_broker_publish_latency{job="broker", quantile="0.5"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 99 pct
+          query: sum(pulsar_broker_publish_latency{job="broker", quantile="0.99"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 999 pct
+          query: sum(pulsar_broker_publish_latency{job="broker", quantile="0.999"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: Max
+          query: sum(pulsar_broker_publish_latency{job="broker", quantile="1.0"}) by (kubernetes_pod_name)
+          unit: ms
+    - name: Topic & Consumer details / broker
+      graphs:
+        - name: Topic count
+          query: sum(pulsar_topics_count{job="broker"}) by (kubernetes_pod_name)
+        - name: Producer count
+          query: sum(pulsar_producers_count{job="broker"}) by (kubernetes_pod_name)
+        - name: Consumer count
+          query: sum(pulsar_consumers_count{job="broker"}) by (kubernetes_pod_name)
+        - name: Messages backlog
+          query: sum(pulsar_msg_backlog{}) by (kubernetes_pod_name)
+- name: Bookies Metrics
+  sections:
+    - name: Write Throughput
+      graphs:
+        - name: Write Throughput
+          query: sum(irate(bookie_WRITE_BYTES{job="bookie"}[30s])) by (kubernetes_pod_name)
+          unit: bytes
+        - name: Add Entry Rate
+          query: sum(irate(bookkeeper_server_ADD_ENTRY_REQUEST_count{job="bookie"}[30s])) by (kubernetes_pod_name)
+    - name: Read Throughput
+      graphs:
+        - name: Read Throughput
+          query: sum(irate(bookie_READ_BYTES{job="bookie"}[30s])) by (kubernetes_pod_name)
+          unit: bytes
+        - name: Read Entry Rate
+          query: sum(irate(bookkeeper_server_READ_ENTRY_REQUEST_count{job="bookie"}[30s])) by (kubernetes_pod_name)
+    - name: Add Entry Latencies
+      graphs:
+        - name: 50 pct
+          query: sum(bookkeeper_server_ADD_ENTRY_REQUEST{job="bookie", success="true", quantile="0.5"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 99 pct
+          query: sum(bookkeeper_server_ADD_ENTRY_REQUEST{job="bookie", success="true", quantile="0.99"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 999 pct
+          query: sum(bookkeeper_server_ADD_ENTRY_REQUEST{job="bookie", success="true", quantile="0.999"}) by (kubernetes_pod_name)
+          unit: ms
+    - name: Read Entry Latencies
+      graphs:
+        - name: 50 pct
+          query: sum(bookkeeper_server_READ_ENTRY_REQUEST{job="bookie", success="true", quantile="0.5"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 99 pct
+          query: sum(bookkeeper_server_READ_ENTRY_REQUEST{job="bookie", success="true", quantile="0.99"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 999 pct
+          query: sum(bookkeeper_server_READ_ENTRY_REQUEST{job="bookie", success="true", quantile="0.999"}) by (kubernetes_pod_name)
+          unit: ms
+    - name: Storage
+      graphs:
+        - name: Ledgers Count
+          query: sum(bookie_ledgers_count{job="bookie"}) by (kubernetes_pod_name)
+        - name: Entries Count
+          query: sum(bookie_entries_count{job="bookie"}) by (kubernetes_pod_name)
+- name: Bookie Journal Metrics
+  sections:
+    - name: Rate
+      graphs:
+        - name: Sync Rate / sec
+          query: sum(irate(bookie_journal_JOURNAL_SYNC_count{job="bookie", success="true"}[30s])) by (kubernetes_pod_name)
+        - name: Add Rate / sec
+          query: sum(irate(bookie_journal_JOURNAL_ADD_ENTRY_count{job="bookie", success="true"}[30s])) by (kubernetes_pod_name)
+    - name: Internal Queues
+      graphs:
+        - name: Journal Queue Length
+          query: sum(bookie_journal_JOURNAL_QUEUE_SIZE{job="bookie"}) by (kubernetes_pod_name)
+        - name: Journal Force Write Queue length
+          query: sum(bookie_journal_JOURNAL_FORCE_WRITE_QUEUE_SIZE{job="bookie"}) by (kubernetes_pod_name)
+        - name: Journal Callback Queue length
+          query: sum(irate(bookie_journal_JOURNAL_CB_QUEUE_SIZE{job="bookie"} [30s])) by (kubernetes_pod_name)
+    - name: Journal Add Latencies
+      graphs:
+        - name: 50 pct
+          query: sum(bookie_journal_JOURNAL_ADD_ENTRY{job="bookie", success="true", quantile="0.5"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 99 pct
+          query: sum(bookie_journal_JOURNAL_ADD_ENTRY{job="bookie", success="true", quantile="0.99"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: Max
+          query: sum(bookie_journal_JOURNAL_ADD_ENTRY{job="bookie", success="true", quantile="1.0"}) by (kubernetes_pod_name)
+          unit: ms
+    - name: Journal Sync Latencies
+      graphs:
+        - name: 50 pct
+          query: sum(bookie_journal_JOURNAL_SYNC{job="bookie", success="true", quantile="0.5"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: 99 pct
+          query: sum(bookie_journal_JOURNAL_SYNC{job="bookie", success="true", quantile="0.99"}) by (kubernetes_pod_name)
+          unit: ms
+        - name: Max
+          query: sum(bookie_journal_JOURNAL_SYNC{job="bookie", success="true", quantile="1.0"}) by (kubernetes_pod_name)
+          unit: ms
