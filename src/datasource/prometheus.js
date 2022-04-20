@@ -3,18 +3,19 @@ import debug from 'debug';
 import assert from "assert";
 
 const log = debug('http');
+const mainLog = debug('main');
 
 const DEFAULT_OPTIONS = {
     step: 60
 }
 
-function getName(result) {
+function getName(queryName, result) {
     const labels = []
     if ('kubernetes_pod_name' in result.metric) {
         return result.metric['kubernetes_pod_name'];
     }
     else {
-        throw `metric does not have recognized names : ${JSON.stringify(result)}`
+        return queryName;
     }
 }
 
@@ -24,7 +25,7 @@ class Prometheus {
         this.url = url;
     }
 
-    async queryRange(promQL, startInSeconds, endInSeconds, _options) {
+    async queryRange(queryName, promQL, startInSeconds, endInSeconds, _options) {
 
         const options = Object.assign({}, DEFAULT_OPTIONS, _options)
 
@@ -44,7 +45,7 @@ class Prometheus {
         log(`< ${resp.status} : ${JSON.stringify(json, null, 4)}`)
 
         return json.data.result.map(result => {
-            const name = getName(result)
+            const name = getName(queryName, result)
             const data = result.values.map(d => {
                 return [d[0] * 1000, d[1]];
             });
@@ -55,7 +56,7 @@ class Prometheus {
         });
     }
 
-    async queryRangeSince(promQL, durationInSeconds, options) {
+    async queryRangeSince(queryName, promQL, durationInSeconds, options) {
         const endInSeconds = Date.now() / 1000;
         const startInSeconds = endInSeconds - durationInSeconds;
         return await this.queryRange(promQL, startInSeconds, endInSeconds, options);

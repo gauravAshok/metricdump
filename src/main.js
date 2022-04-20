@@ -50,18 +50,31 @@ const prometheusClient = new Prometheus(prometheus);
 let graphId = 0;
 
 async function fetchMetrics(graphOptions) {
-    const _promql = graphOptions.query;
+    if ('query' in graphOptions) {
+        return await fetchMetricsForAQuery(graphOptions.name, graphOptions.query);
+    }
+    else if ('queries' in graphOptions) {
+        let datasetArray = await Promise.all(graphOptions.queries.map(q => fetchMetricsForAQuery(q.name, q.query)));
+        return datasetArray.flat();
+    }
+    else {
+        throw `unknown graph yaml: ${JSON.stringify(graphYaml)}`;
+    }
+}
+
+async function fetchMetricsForAQuery(queryName, query) {
+    const _promql = query;
     log(`Query Prometheus: ${_promql}`);
 
     let dataSet;
     if (since !== undefined && since > 0) {
-        dataSet = await prometheusClient.queryRangeSince(_promql, since, {
+        dataSet = await prometheusClient.queryRangeSince(queryName, _promql, since, {
             step: step || calculateStep()
         });
         log(`Got data from Prometheus: ${dataSet.length} series are found`);
     } else {
         log(`queryRange: _promql=${_promql}, start=${startInUnixSeconds} end=${endInUnixSeconds}`);
-        dataSet = await prometheusClient.queryRange(_promql, startInUnixSeconds, endInUnixSeconds, {
+        dataSet = await prometheusClient.queryRange(queryName, _promql, startInUnixSeconds, endInUnixSeconds, {
             step: step || calculateStep()
         });
         log(`Got data from Prometheus: ${dataSet.length} series are found`);
@@ -119,16 +132,26 @@ function calculateStep() {
 }
 
 async function buildGraphsOptions(graphYaml) {
-    let thisGraphId = graphId;
     graphId = graphId + 1;
 
-    return {
+    let graph = {
         name: graphYaml.name,
         id: graphId,
-        query: graphYaml.query,
         unit: graphYaml.unit,
-        dataset: await fetchMetrics(graphYaml)
+        stacked: ('stacked' in graphYaml ? graphYaml.stacked : false)
+    };
+
+    let dataset = await fetchMetrics(graphYaml);
+
+    if (graph.stacked) {
+        dataset = dataset.map(d => {
+            d.stack = 'total'
+            return d;
+        });
     }
+
+    graph.dataset = dataset;
+    return graph;
 }
 
 async function buildSection(sectionYaml) {
